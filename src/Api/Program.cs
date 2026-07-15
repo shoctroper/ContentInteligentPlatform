@@ -31,13 +31,32 @@ builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbConte
 // --- Knowledge Engine ---
 builder.Services.AddSingleton<IKnowledgeRepository>(_ => new MarkdownKnowledgeRepository(knowledgeRoot));
 
-// --- AI Provider (ADR-004): hoy Claude, mañana intercambiable por configuración ---
+// --- AI Provider (ADR-004 + ADR-007): intercambiable por configuración AiProvider:Active ---
 builder.Services.AddSingleton(new ClaudeAiProviderOptions
 {
     ApiKey = builder.Configuration["AiProvider:Claude:ApiKey"] ?? string.Empty,
     Model = builder.Configuration["AiProvider:Claude:Model"] ?? "claude-sonnet-4-5-20250929"
 });
-builder.Services.AddHttpClient<IAiProvider, ClaudeAiProvider>();
+builder.Services.AddSingleton(new DeepSeekAiProviderOptions
+{
+    ApiKey = builder.Configuration["AiProvider:DeepSeek:ApiKey"] ?? string.Empty,
+    Model = builder.Configuration["AiProvider:DeepSeek:Model"] ?? "deepseek-v4-flash"
+});
+builder.Services.AddHttpClient("Claude");
+builder.Services.AddHttpClient("DeepSeek");
+
+var activeAiProvider = builder.Configuration["AiProvider:Active"] ?? "Claude";
+builder.Services.AddScoped<IAiProvider>(sp =>
+{
+    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+    return activeAiProvider switch
+    {
+        "DeepSeek" => new DeepSeekAiProvider(httpClientFactory.CreateClient("DeepSeek"), sp.GetRequiredService<DeepSeekAiProviderOptions>()),
+        "Claude" => new ClaudeAiProvider(httpClientFactory.CreateClient("Claude"), sp.GetRequiredService<ClaudeAiProviderOptions>()),
+        _ => throw new InvalidOperationException(
+            $"Proveedor de IA desconocido en AiProvider:Active: '{activeAiProvider}'. Valores soportados: Claude, DeepSeek.")
+    };
+});
 
 // --- CQRS / MediatR / FluentValidation ---
 builder.Services.AddMediatR(cfg =>

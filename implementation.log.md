@@ -91,3 +91,19 @@ Con luz verde explícita del usuario para avanzar sin esperar revisión de UX, s
 2. UX/diseño visual: hoy es funcional pero sin pulido — pendiente de revisión del usuario cuando tenga tiempo.
 3. El cliente HTTP es manual; si el contrato OpenAPI cambia seguido, vale automatizar la generación
   (`openapi-generator`/`orval`).
+
+---
+
+## Cuarta iteración: segundo proveedor de IA — DeepSeek (ADR-007)
+
+- Nuevo adapter `DeepSeekAiProvider` (API OpenAI-compatible, modelo `deepseek-v4-flash`, thinking mode
+  deshabilitado por defecto). 5 tests nuevos (16/16 en `Infrastructure.Tests` ahora, antes 11).
+- Selección de proveedor activo por configuración (`AiProvider:Active`), completando lo que ADR-004 prometía
+  pero no implementaba (antes estaba hardcodeado a Claude en el DI).
+- **Validación real (no mock)**: se corrió la Api completa en el sandbox con la API key de DeepSeek provista
+  por el usuario contra un texto de prueba. La integración (auth, formato de request, manejo de errores) quedó
+  confirmada — DeepSeek respondió `402 Insufficient Balance` (key válida, cuenta sin saldo), no un error de
+  autenticación ni de formato. **Falta cargar saldo en la cuenta DeepSeek del usuario para ver contenido
+  generado real.**
+- Suite completa: **54/54 pruebas** (antes 49).
+- La API key se usó solo como variable de entorno temporal en el sandbox; no quedó en ningún archivo del repo.
