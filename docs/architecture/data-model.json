@@ -1,0 +1,80 @@
+{
+  "entities": [
+    {
+      "name": "Profile",
+      "description": "Índice de un perfil editorial cuyo contenido real vive en knowledge/profiles/*.md",
+      "fields": {
+        "Id": "Guid",
+        "Slug": "string (unique, e.g. 'periodistico')",
+        "Name": "string",
+        "ParentSlug": "string? (herencia, nullable)",
+        "Version": "int",
+        "FilePath": "string",
+        "ContentHash": "string",
+        "CreatedAt": "DateTimeOffset"
+      },
+      "invariants": [
+        "Slug es único por versión (Slug+Version es la PK lógica)",
+        "ParentSlug no puede crear ciclos de herencia",
+        "Version es inmutable una vez creada (nueva versión = nueva fila)"
+      ]
+    },
+    {
+      "name": "Source",
+      "description": "Entrada cruda enviada por el usuario (MVP: solo FreeText)",
+      "fields": {
+        "Id": "Guid",
+        "Type": "enum(FreeText)",
+        "RawContent": "string",
+        "SubmittedAt": "DateTimeOffset"
+      },
+      "invariants": ["RawContent no puede estar vacío"]
+    },
+    {
+      "name": "NewsItem",
+      "description": "Fuente normalizada (sección 8 del PRD)",
+      "fields": {
+        "Id": "Guid",
+        "SourceId": "Guid (FK Source)",
+        "Title": "string",
+        "Summary": "string",
+        "FactsJson": "string (JSON array de hechos extraídos)",
+        "Confidence": "decimal (0.0–1.0)",
+        "MissingInformation": "string?",
+        "CreatedAt": "DateTimeOffset"
+      },
+      "invariants": ["Confidence entre 0 y 1 inclusive"]
+    },
+    {
+      "name": "Generation",
+      "description": "Resultado de una ejecución completa del pipeline (sección 15, Memoria)",
+      "fields": {
+        "Id": "Guid",
+        "NewsItemId": "Guid (FK NewsItem)",
+        "ProfileId": "Guid (FK Profile)",
+        "ProviderName": "string (ej. 'Claude')",
+        "Model": "string",
+        "PromptText": "string",
+        "ResultMarkdown": "string",
+        "ResultJson": "string",
+        "TokensInput": "int",
+        "TokensOutput": "int",
+        "CostUsd": "decimal",
+        "DurationMs": "int",
+        "Rating": "int? (1-5, nullable hasta que el usuario califique)",
+        "Comments": "string?",
+        "CreatedAt": "DateTimeOffset"
+      },
+      "invariants": [
+        "ProfileId debe referenciar una versión existente e inmutable de Profile",
+        "Rating, si existe, está entre 1 y 5"
+      ]
+    }
+  ],
+  "relationships": [
+    { "from": "NewsItem", "to": "Source", "type": "many-to-one" },
+    { "from": "Generation", "to": "NewsItem", "type": "many-to-one" },
+    { "from": "Generation", "to": "Profile", "type": "many-to-one" },
+    { "from": "Profile", "to": "Profile", "type": "self-referencing (ParentSlug)" }
+  ]
+}
