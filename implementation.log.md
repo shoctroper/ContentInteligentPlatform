@@ -59,3 +59,35 @@ cd src/Api
 dotnet user-secrets init
 dotnet user-secrets set "AiProvider:Claude:ApiKey" "sk-ant-..."
 ```
+
+---
+
+## Tercera iteración: frontend Angular (ADR-006)
+
+Con luz verde explícita del usuario para avanzar sin esperar revisión de UX, se construyó un frontend Angular 18
+(standalone components, sin NgModules) en `frontend/`:
+
+- **Páginas**: `/generar` (formulario: texto + perfil + formato → llama `POST /api/generations`, muestra el
+  Markdown resultante, confianza e información faltante) y `/historial` (lista + detalle + calificación vía
+  `PATCH /api/generations/{id}/rating`).
+- **ApiService**: cliente HTTP tipado a mano contra `docs/architecture/openapi.yaml` (no autogenerado — ver
+  ADR-006 para el trade-off).
+- **CORS** habilitado en la Api (`Cors:AllowedOrigins`, default `http://localhost:4200`) para desarrollo.
+- **Docker**: `frontend/Dockerfile` (build con Node 22 + `nginx` sirviendo el build de producción, con proxy
+  `/api/*` hacia el servicio `api`). Sumado como segundo servicio en `docker-compose.yml` raíz.
+- **Tests**: `ApiService`, `GenerateComponent`, `HistoryComponent` y `AppComponent` tienen specs con
+  `HttpClientTestingModule`/`HttpTestingController`. **No se ejecutaron en este sandbox** — el host es
+  aarch64 (arm64) y el único Chrome disponible vía `puppeteer` se descargó en build x86-64, incompatible
+  (`Cannot start ChromeHeadless`). No hay apt/root para instalar un Chromium nativo arm64 tampoco.
+  Mitigación: se verificó `npx tsc -p tsconfig.spec.json --noEmit` sin errores (los specs compilan y tipan
+  correctamente) y se agregó un job `frontend-build-and-test` en `.github/workflows/ci.yml` que corre
+  `ng test --browsers=ChromeHeadless` en el runner de GitHub Actions (Ubuntu con Chrome preinstalado) — ahí
+  sí se ejecutarán de verdad en cada push/PR.
+- **Build de producción** (`ng build`) sí se corrió y compiló limpio, en modo `production` y `development`.
+
+### Pendiente de esta iteración
+1. Confirmar en el primer push que el job `frontend-build-and-test` de CI efectivamente pasa (no pude
+  validarlo localmente por la limitación de Chrome).
+2. UX/diseño visual: hoy es funcional pero sin pulido — pendiente de revisión del usuario cuando tenga tiempo.
+3. El cliente HTTP es manual; si el contrato OpenAPI cambia seguido, vale automatizar la generación
+  (`openapi-generator`/`orval`).

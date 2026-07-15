@@ -1,0 +1,49 @@
+<section class="generate">
+  <h1>Generar guion</h1>
+
+  <div *ngIf="errorMessage()" class="alert error">{{ errorMessage() }}</div>
+
+  <form (ngSubmit)="submit()" #form="ngForm">
+    <label>
+      Texto de la fuente
+      <textarea
+        name="sourceText"
+        rows="8"
+        [(ngModel)]="sourceText"
+        required
+        placeholder="Pega aquí el artículo, transcripción o notas..."
+      ></textarea>
+    </label>
+
+    <label>
+      Perfil editorial
+      <select name="profileSlug" [(ngModel)]="profileSlug" required>
+        <option *ngFor="let profile of profiles()" [value]="profile.slug">{{ profile.name }}</option>
+      </select>
+    </label>
+
+    <label>
+      Formato de salida
+      <select name="outputFormat" [(ngModel)]="outputFormat" required>
+        <option *ngFor="let format of outputFormats" [value]="format">{{ format }}</option>
+      </select>
+    </label>
+
+    <button type="submit" [disabled]="loading() || !form.valid">
+      {{ loading() ? 'Generando...' : 'Generar' }}
+    </button>
+  </form>
+
+  <article *ngIf="result() as r" class="result">
+    <h2>Resultado ({{ r.providerName }})</h2>
+    <p class="meta">
+      Confianza: {{ (r.confidence * 100).toFixed(0) }}% ·
+      Tokens: {{ r.tokensInput }} in / {{ r.tokensOutput }} out ·
+      Costo: ${{ r.costUsd.toFixed(4) }}
+    </p>
+    <p *ngIf="r.missingInformation" class="alert warning">
+      Información faltante: {{ r.missingInformation }}
+    </p>
+    <pre class="markdown">{{ r.resultMarkdown }}</pre>
+  </article>
+</section>

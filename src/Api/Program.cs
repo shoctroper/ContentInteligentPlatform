@@ -51,6 +51,15 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddProblemDetails();
 
+// --- CORS: habilitado para el frontend Angular (ADR-006). Ajustar orígenes antes de producción real. ---
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? new[] { "http://localhost:4200" };
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+        policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod());
+});
+
 // --- Observabilidad (OpenTelemetry, sección "Observabilidad" de la skill devops) ---
 var otlpEndpoint = builder.Configuration["Otel:Endpoint"];
 builder.Services.AddOpenTelemetry()
@@ -94,6 +103,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseCors("Frontend");
 
 app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
 {

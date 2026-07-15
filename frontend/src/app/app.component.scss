@@ -1,0 +1,28 @@
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 2rem;
+
+  h1 { font-size: 1.25rem; margin: 0; }
+
+  nav {
+    display: flex;
+    gap: 1rem;
+
+    a {
+      text-decoration: none;
+      color: #333;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+
+      &.active { background: #eef; font-weight: 600; }
+    }
+  }
+}
+
+main {
+  padding: 0 2rem 2rem;
+}

@@ -14,7 +14,7 @@ nunca dentro del modelo. Ver PRD y documentación de proceso en `docs/`.
 - Docker: `Dockerfile` multi-stage + `docker-compose.yml` listos para levantar localmente.
 - CI: GitHub Actions (build + test + cobertura en cada push/PR, imagen a GHCR al mergear a `main`).
 - 49 pruebas automatizadas, ~92% de cobertura de líneas (ver `docs/quality-gate.json`).
-- Frontend Angular: pendiente (ver `docs/architecture/ADR-005-frontend-deferred.md`).
+- Frontend Angular 18 (`frontend/`): formulario de generación + historial + calificación, funcional contra la Api. Ver ADR-006 (reactiva ADR-005).
 
 ## Estructura
 
@@ -61,6 +61,16 @@ dotnet user-secrets set "AiProvider:Claude:ApiKey" "sk-ant-..."
 export CLAUDE_API_KEY="sk-ant-..."
 docker compose up -d
 curl http://localhost:8080/health
+# Frontend: http://localhost:4200
+```
+
+## Correr el frontend en modo desarrollo
+
+```bash
+cd frontend
+npm install
+npm start          # http://localhost:4200, apunta a http://localhost:5080 (ver src/environments/environment.ts)
+npm test           # requiere Chrome/Chromium disponible localmente
 ```
 
 Runbooks completos en `docs/devops/deploy.md` y `docs/devops/rollback.md`.

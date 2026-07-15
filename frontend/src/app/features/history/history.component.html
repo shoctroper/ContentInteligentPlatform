@@ -1,0 +1,47 @@
+<section class="history">
+  <h1>Historial de generaciones</h1>
+
+  <div *ngIf="errorMessage()" class="alert error">{{ errorMessage() }}</div>
+  <p *ngIf="loading()">Cargando...</p>
+
+  <table *ngIf="!loading() && items().length > 0">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Perfil</th>
+        <th>Rating</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let item of items()">
+        <td>{{ item.createdAt | date: 'short' }}</td>
+        <td>{{ item.profileSlug }}</td>
+        <td>{{ item.rating ?? '—' }}</td>
+        <td><button (click)="open(item.id)">Ver</button></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p *ngIf="!loading() && items().length === 0">Todavía no hay generaciones.</p>
+
+  <article *ngIf="selected() as s" class="detail">
+    <h2>Detalle</h2>
+    <p class="meta">Perfil: {{ s.profileSlug }} · Proveedor: {{ s.providerName }}</p>
+    <pre class="markdown">{{ s.resultMarkdown }}</pre>
+
+    <div class="rating">
+      <label>
+        Calificación (1-5)
+        <select [(ngModel)]="ratingValue">
+          <option *ngFor="let n of [1,2,3,4,5]" [value]="n">{{ n }}</option>
+        </select>
+      </label>
+      <label>
+        Comentarios
+        <input type="text" [(ngModel)]="comments" placeholder="Opcional" />
+      </label>
+      <button (click)="rate()">Guardar calificación</button>
+    </div>
+  </article>
+</section>

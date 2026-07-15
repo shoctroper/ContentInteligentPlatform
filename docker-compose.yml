@@ -26,5 +26,16 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: content-intelligence-platform-frontend:local
+    ports:
+      - "4200:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   cip-data:

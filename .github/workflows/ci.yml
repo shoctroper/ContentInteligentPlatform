@@ -45,8 +45,32 @@ jobs:
           name: coverage-report
           path: coverage/report
 
+  frontend-build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Unit tests (ChromeHeadless)
+        working-directory: frontend
+        run: npx ng test --watch=false --browsers=ChromeHeadless
+
+      - name: Build (production)
+        working-directory: frontend
+        run: npx ng build
+
   build-image:
-    needs: build-and-test
+    needs: [build-and-test, frontend-build-and-test]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
