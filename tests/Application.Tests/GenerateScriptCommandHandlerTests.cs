@@ -88,6 +88,40 @@ public class GenerateScriptCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ConVacioDeInformacionSoloEnExtraccion_DeberiaConservarloEnElResultadoFinal()
+    {
+        const string extractionConVacio = """
+            {"title":"Título","summary":"Resumen","facts":["Hecho 1"],"confidence":0.9,"missingInformation":"Falta precisar el cargo exacto de la persona mencionada."}
+            """;
+        // La etapa de redacción "olvida" el vacío (comportamiento real observado con Gemini)
+        // y reporta confidence 1.0 y missingInformation null.
+        const string scriptSinVacio = """
+            {"title":"Título","hook":"Hook","introduction":"Intro","body":"Cuerpo","ending":"Cierre","cta":"Sigue","hashtags":["#a"],"keywords":["k"],"category":"news","estimatedDurationSeconds":60,"confidence":1.0,"missingInformation":null,"sources":["fuente"]}
+            """;
+
+        var provider = Substitute.For<IAiProvider>();
+        provider.Name.Returns("Gemini");
+        provider.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(
+                new AiCompletionResult(extractionConVacio, 100, 50, 0.001m, "gemini-test"),
+                new AiCompletionResult(scriptSinVacio, 200, 100, 0.002m, "gemini-test"));
+
+        await using var db = InMemoryDbContextFactory.Create();
+        var handler = new GenerateScriptCommandHandler(
+            provider, BuildKnowledgeRepository(), db, NullLogger<GenerateScriptCommandHandler>.Instance);
+
+        var command = new GenerateScriptCommand("Texto de la fuente de prueba.", "periodistico", "TikTok");
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        // La confianza final nunca debe ser mayor que la etapa más insegura (extracción: 0.9).
+        result.Value.Confidence.Should().Be(0.9m);
+        // El vacío detectado en extracción no debe perderse aunque la redacción no lo repita.
+        result.Value.MissingInformation.Should().Contain("cargo exacto");
+    }
+
+    [Fact]
     public async Task Handle_ConPerfilInexistente_DeberiaFallar()
     {
         await using var db = InMemoryDbContextFactory.Create();

@@ -141,3 +141,28 @@ Con luz verde explícita del usuario para avanzar sin esperar revisión de UX, s
   Google Cloud del usuario) — no un problema de nuestro código.
 - Suite completa: **69/69 pruebas** (antes 59).
 - La key se usó solo como variable de entorno temporal; no quedó en ningún archivo del repo.
+
+---
+
+## Séptima iteración: conocimiento base multi-archivo + bug de confidence/missingInformation (ADR-010)
+
+- El usuario proporcionó el contenido completo de 5 documentos editoriales (Manifiesto, Identidad, Pensamiento,
+  Storytelling, Voz). Se agregaron/reemplazaron en `knowledge/`: `manifesto.md`, `identity.md` (reemplaza el
+  placeholder original), `thinking.md`, `storytelling.md`, `voice.md`.
+- `GenerateScriptCommandHandler` ahora combina los 6 archivos base (`manifesto.md → identity.md → rules.md →
+  thinking.md → storytelling.md → voice.md`, orden deliberado: por qué → quién → límites → cómo pensar → cómo
+  narrar → cómo suena) en un solo system prompt, en vez de leer solo `identity.md`.
+- **Demo en vivo pedida por el usuario**: se generó un guion de ejemplo (dos llamadas reales a Gemini,
+  replicando el pipeline exacto fuera del sandbox de 45s por llamada) para un texto real sobre el episodio 126
+  de "Loret en Latinus" (Loret/Brozo sobre Ernestina Godoy y la captura de "El Mayo" Zambada).
+- **Bug real encontrado durante la demo**: la etapa de extracción detectó correctamente un vacío de información
+  (posible inconsistencia de cargo/fecha de Ernestina Godoy) con `confidence: 0.9`, pero la etapa de redacción,
+  al no recibir ese `missingInformation` en su prompt, produjo un guion final con `confidence: 1.0` y
+  `missingInformation: null` — el vacío detectado se perdía silenciosamente en el resultado que ve el usuario.
+  Esto contradice un principio explícito del Manifiesto/Reglas (declarar información faltante, no ocultarla).
+- **Corrección** (ver ADR-010): el prompt de redacción ahora recibe explícitamente el `missingInformation` de
+  extracción; además, el handler ya no persiste `script.Confidence`/`script.MissingInformation` directamente,
+  sino una combinación programática: `finalConfidence = min(extraction.Confidence, script.Confidence)` y
+  `finalMissingInformation` fusiona ambas etapas. Es una salvaguarda de código, no solo de prompt.
+- 1 test de regresión nuevo replicando el caso real observado.
+- Suite completa: **70/70 pruebas** (antes 69).

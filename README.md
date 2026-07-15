@@ -9,7 +9,7 @@ nunca dentro del modelo. Ver PRD y documentación de proceso en `docs/`.
 - .NET 8, Clean Architecture (Domain / Application / Infrastructure / Api), DDD + CQRS (MediatR), FluentValidation.
 - Persistencia: EF Core + SQLite, con migración inicial (`InitialCreate`) aplicada automáticamente al arrancar.
 - IA: proveedor intercambiable (`IAiProvider`), seleccionable por configuración (`AiProvider:Active`); adapters listos para Claude (Anthropic), DeepSeek, OpenRouter y Gemini — **generación real validada end-to-end con Gemini**.
-- Conocimiento editorial: `knowledge/*.md` con front-matter YAML (herencia entre perfiles).
+- Conocimiento editorial: `knowledge/*.md` con front-matter YAML (herencia entre perfiles). El system prompt combina 6 archivos base en orden fijo: `manifesto.md → identity.md → rules.md → thinking.md → storytelling.md → voice.md`.
 - Observabilidad: OpenTelemetry (traces/metrics), correlation-id, health checks `/health` y `/ready`.
 - Docker: `Dockerfile` multi-stage + `docker-compose.yml` listos para levantar localmente.
 - CI: GitHub Actions (build + test + cobertura en cada push/PR, imagen a GHCR al mergear a `main`).
@@ -30,7 +30,7 @@ src/
 tests/
   Domain.Tests/  Application.Tests/  Infrastructure.Tests/  Api.IntegrationTests/
 knowledge/
-  identity.md  rules.md  profiles/*.md
+  manifesto.md  identity.md  rules.md  thinking.md  storytelling.md  voice.md  profiles/*.md
 Dockerfile
 docker-compose.yml
 .github/workflows/ci.yml

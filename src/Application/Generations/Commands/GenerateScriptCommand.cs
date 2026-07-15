@@ -57,7 +57,7 @@ public class GenerateScriptCommandHandler : IRequestHandler<GenerateScriptComman
         if (chainResult.IsFailure)
             return Result.Failure<GenerationDetailDto>(chainResult.Error!);
 
-        var baseKnowledge = await _knowledgeRepository.ReadBaseKnowledgeAsync("identity.md", cancellationToken);
+        var baseKnowledge = await ReadCombinedBaseKnowledgeAsync(cancellationToken);
 
         // 2. Crear Source
         var sourceResult = Source.Create(SourceType.FreeText, request.SourceText, DateTimeOffset.UtcNow);
@@ -93,6 +93,13 @@ public class GenerateScriptCommandHandler : IRequestHandler<GenerateScriptComman
                 LlmJsonResponse.StripMarkdownFence(scriptCompletion.Text), JsonOptions)
             ?? throw new InvalidOperationException("El proveedor de IA devolvió un guion inválido.");
 
+        // 7b. Salvaguarda: la etapa de redacción puede "olvidar" un vacío de información
+        // detectado en la extracción aunque el prompt se lo pida explícitamente (visto en pruebas
+        // reales con Gemini). No confiamos únicamente en que el modelo lo reporte dos veces:
+        // combinamos ambas etapas para que el usuario final nunca pierda una señal de incertidumbre.
+        var finalConfidence = Math.Min(extraction.Confidence, script.Confidence);
+        var finalMissingInformation = CombineMissingInformation(extraction.MissingInformation, script.MissingInformation);
+
         // 8. Salida: persistir Generation
         var profileEntity = await FindOrCreateProfileEntityAsync(leafDoc, cancellationToken);
 
@@ -114,12 +121,44 @@ public class GenerateScriptCommandHandler : IRequestHandler<GenerateScriptComman
         _db.Generations.Add(generation);
         await _db.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Generación {GenerationId} creada con confianza {Confidence}", generation.Id, script.Confidence);
+        _logger.LogInformation("Generación {GenerationId} creada con confianza {Confidence}", generation.Id, finalConfidence);
 
         return Result.Success(new GenerationDetailDto(
             generation.Id, leafDoc.Slug, generation.ProviderName, resultMarkdown, resultJson,
-            script.Confidence, script.MissingInformation, totalTokensInput, totalTokensOutput, totalCost,
+            finalConfidence, finalMissingInformation, totalTokensInput, totalTokensOutput, totalCost,
             null, generation.CreatedAt));
+    }
+
+    private static string? CombineMissingInformation(string? fromExtraction, string? fromScript)
+    {
+        if (string.IsNullOrWhiteSpace(fromExtraction))
+            return string.IsNullOrWhiteSpace(fromScript) ? null : fromScript;
+        if (string.IsNullOrWhiteSpace(fromScript))
+            return fromExtraction;
+        if (string.Equals(fromExtraction.Trim(), fromScript.Trim(), StringComparison.OrdinalIgnoreCase))
+            return fromScript;
+
+        return $"{fromScript} | (detectado también en extracción: {fromExtraction})";
+    }
+
+    // Orden deliberado: por qué (manifesto) -> quién (identity) -> límites (rules) -> cómo pensar (thinking)
+    // -> cómo narrar (storytelling) -> cómo suena (voice). Ver docs/architecture (pendiente ADR de este orden).
+    private static readonly string[] BaseKnowledgeFiles =
+    {
+        "manifesto.md", "identity.md", "rules.md", "thinking.md", "storytelling.md", "voice.md"
+    };
+
+    private async Task<string> ReadCombinedBaseKnowledgeAsync(CancellationToken cancellationToken)
+    {
+        var parts = new List<string>();
+        foreach (var file in BaseKnowledgeFiles)
+        {
+            var content = await _knowledgeRepository.ReadBaseKnowledgeAsync(file, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(content))
+                parts.Add(content);
+        }
+
+        return string.Join("\n\n---\n\n", parts);
     }
 
     private async Task<Profile> FindOrCreateProfileEntityAsync(KnowledgeProfileDocument doc, CancellationToken cancellationToken)

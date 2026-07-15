@@ -45,5 +45,8 @@ public static class PromptBuilder
          {string.Join("\n- ", extraction.Facts)}
 
          RESUMEN: {extraction.Summary}
+
+         INFORMACION FALTANTE DETECTADA EN LA ETAPA DE EXTRACCION: {extraction.MissingInformation ?? "(ninguna)"}
+         Si esta informacion faltante sigue siendo relevante para el guion final, repórtala en tu propio campo "missingInformation" (puedes reformularla o combinarla con nuevos vacíos que detectes). No la ignores ni la des por resuelta sin justificación. Tu "confidence" debe reflejar este vacío si sigue vigente: no puede ser mayor que {extraction.Confidence} salvo que expliques por qué el vacío ya no aplica.
          """;
 }
