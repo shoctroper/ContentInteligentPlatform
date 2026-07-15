@@ -1,0 +1,21 @@
+{
+  "contract_ok": true,
+  "contract_note": "Verificación manual: los 6 endpoints de openapi.yaml (/api/profiles GET+POST, /api/generations GET+POST, /api/generations/{id} GET, /api/generations/{id}/rating PATCH) están implementados 1:1 en Program.cs. No se corrió Schemathesis/Dredd (no disponibles en el sandbox de desarrollo).",
+  "coverage_lines": 0.917,
+  "coverage_branches": 0.697,
+  "coverage_note": "Excluye código autogenerado de EF Core Migrations. Objetivo skill: ≥80% líneas (cumplido), ≥70% branches (rozando, 69.7%).",
+  "total_tests": 49,
+  "tests_by_project": {
+    "Domain.Tests": 18,
+    "Application.Tests": 14,
+    "Infrastructure.Tests": 11,
+    "Api.IntegrationTests": 6
+  },
+  "e2e_pass": null,
+  "e2e_note": "No se ejecutó Playwright (requiere frontend, diferido por ADR-005). Los 'user journeys' críticos del backend se cubren con Api.IntegrationTests vía WebApplicationFactory.",
+  "flaky": [],
+  "flaky_note": "Suite completa corrida 3 veces consecutivas, 49/49 verde en todas. Sin Testcontainers (no había Docker en el sandbox): Infrastructure.Tests usa EF Core InMemory + filesystem temporal real, no mocks de más alto nivel.",
+  "perf_p95_ms": null,
+  "perf_note": "No se corrió smoke de performance (k6/Artillery no disponibles en el sandbox). Pendiente antes de producción.",
+  "verdict": "pass_with_caveats"
+}

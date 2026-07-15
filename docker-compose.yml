@@ -1,0 +1,30 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: content-intelligence-platform-api:local
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "Data Source=/data/cip.db"
+      Knowledge__RootPath: /knowledge
+      # Requerido para generar contenido real; no se define aquí a propósito.
+      # Usa un archivo .env (no versionado) o `docker compose run -e`.
+      AiProvider__Claude__ApiKey: "${CLAUDE_API_KEY:-}"
+      AiProvider__Claude__Model: "${CLAUDE_MODEL:-claude-sonnet-4-5-20250929}"
+      Otel__Endpoint: "${OTEL_ENDPOINT:-}"
+    volumes:
+      - cip-data:/data
+      - ./knowledge:/knowledge:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  cip-data:

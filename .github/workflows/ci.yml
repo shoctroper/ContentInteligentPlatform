@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore ContentIntelligencePlatform.sln
+
+      - name: Build
+        run: dotnet build ContentIntelligencePlatform.sln --no-restore --configuration Release
+
+      - name: Test + coverage
+        run: |
+          dotnet test ContentIntelligencePlatform.sln \
+            --no-build --configuration Release \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Exclude="[*]*.Migrations.*"
+
+      - name: Coverage summary
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          reportgenerator "-reports:coverage/*/coverage.cobertura.xml" "-targetdir:coverage/report" "-reporttypes:TextSummary;MarkdownSummaryGithub"
+          cat coverage/report/Summary.txt
+          cat coverage/report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/report
+
+  build-image:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/content-intelligence-platform-api:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/content-intelligence-platform-api:latest

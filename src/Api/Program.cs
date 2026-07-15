@@ -10,6 +10,12 @@ using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,7 +51,43 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddProblemDetails();
 
+// --- Observabilidad (OpenTelemetry, sección "Observabilidad" de la skill devops) ---
+var otlpEndpoint = builder.Configuration["Otel:Endpoint"];
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService("content-intelligence-api"))
+    .WithTracing(t =>
+    {
+        t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation();
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+            t.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
+        else
+            t.AddConsoleExporter();
+    })
+    .WithMetrics(m =>
+    {
+        m.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation();
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+            m.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
+    });
+
+builder.Logging.AddOpenTelemetry(o =>
+{
+    o.IncludeScopes = true;
+    o.IncludeFormattedMessage = true;
+});
+
+// --- Health checks: /health (liveness) y /ready (readiness, incluye DB) ---
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>("database", tags: new[] { "ready" });
+
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    if (db.Database.IsRelational())
+        db.Database.Migrate();
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -108,6 +150,24 @@ app.MapPatch("/api/generations/{id:guid}/rating", async (Guid id, RateGeneration
     var result = await sender.Send(new RateGenerationCommand(id, body.Rating, body.Comments), ct);
     return result.IsSuccess ? Results.NoContent() : Results.Problem(result.Error, statusCode: StatusCodes.Status400BadRequest);
 });
+
+app.Use(async (context, next) =>
+{
+    const string headerName = "X-Correlation-Id";
+    var correlationId = context.Request.Headers.TryGetValue(headerName, out var existing)
+        ? existing.ToString()
+        : Guid.NewGuid().ToString();
+    context.Response.Headers[headerName] = correlationId;
+
+    using (context.RequestServices.GetRequiredService<ILoggerFactory>()
+               .CreateLogger("CorrelationId").BeginScope(new Dictionary<string, object> { ["CorrelationId"] = correlationId }))
+    {
+        await next();
+    }
+});
+
+app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 
 app.Run();
 
