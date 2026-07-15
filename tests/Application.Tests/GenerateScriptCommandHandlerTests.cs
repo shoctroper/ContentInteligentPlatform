@@ -63,6 +63,31 @@ public class GenerateScriptCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ConRespuestaEnvueltaEnFenceMarkdown_DeberiaParsearlaIgual()
+    {
+        var fencedExtraction = "```json\n" + ExtractionJson.Trim() + "\n```";
+        var fencedScript = "```json\n" + ScriptJson.Trim() + "\n```";
+
+        var provider = Substitute.For<IAiProvider>();
+        provider.Name.Returns("Gemini");
+        provider.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(
+                new AiCompletionResult(fencedExtraction, 100, 50, 0.001m, "gemini-test"),
+                new AiCompletionResult(fencedScript, 200, 100, 0.002m, "gemini-test"));
+
+        await using var db = InMemoryDbContextFactory.Create();
+        var handler = new GenerateScriptCommandHandler(
+            provider, BuildKnowledgeRepository(), db, NullLogger<GenerateScriptCommandHandler>.Instance);
+
+        var command = new GenerateScriptCommand("Texto de la fuente de prueba.", "periodistico", "TikTok");
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ProviderName.Should().Be("Gemini");
+    }
+
+    [Fact]
     public async Task Handle_ConPerfilInexistente_DeberiaFallar()
     {
         await using var db = InMemoryDbContextFactory.Create();

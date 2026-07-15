@@ -122,3 +122,22 @@ Con luz verde explícita del usuario para avanzar sin esperar revisión de UX, s
   código.
 - Suite completa: **59/59 pruebas** (antes 54).
 - La key se usó solo como variable de entorno temporal; no quedó en ningún archivo del repo.
+
+---
+
+## Sexta iteración: cuarto proveedor de IA — Gemini (ADR-009) + bug real corregido
+
+- Nuevo adapter `GeminiAiProvider` (Interactions API de Google, header `x-goog-api-key`, modelo
+  `gemini-3.5-flash`, thinking level `minimal`). `AiProvider:Active` ahora soporta Claude | DeepSeek |
+  OpenRouter | Gemini.
+- **Bug real encontrado en producción de pruebas**: Gemini envolvió su respuesta JSON en un fence de Markdown
+  (```json ... ```), rompiendo el `JsonSerializer.Deserialize`. Corregido con `LlmJsonResponse.StripMarkdownFence()`,
+  aplicado a **todos** los proveedores (no solo Gemini) en `GenerateScriptCommandHandler`. 5 tests nuevos
+  cubriendo el sanitizador + el escenario de regresión.
+- **Primera generación de contenido real y verificada de punta a punta del proyecto**: tras el fix, 2 de 3
+  intentos contra la Api real devolvieron `201 Created` con un guion completo en español (noticia sobre una
+  línea de metro en CDMX), con `confidence`, `missingInformation`, tokens y costo reales. El intento fallido
+  fue `403 SERVICE_DISABLED` (la API tardó unos segundos en propagarse tras habilitarse en el proyecto de
+  Google Cloud del usuario) — no un problema de nuestro código.
+- Suite completa: **69/69 pruebas** (antes 59).
+- La key se usó solo como variable de entorno temporal; no quedó en ningún archivo del repo.

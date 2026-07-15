@@ -8,7 +8,7 @@ nunca dentro del modelo. Ver PRD y documentación de proceso en `docs/`.
 
 - .NET 8, Clean Architecture (Domain / Application / Infrastructure / Api), DDD + CQRS (MediatR), FluentValidation.
 - Persistencia: EF Core + SQLite, con migración inicial (`InitialCreate`) aplicada automáticamente al arrancar.
-- IA: proveedor intercambiable (`IAiProvider`), seleccionable por configuración (`AiProvider:Active`); adapters listos para Claude (Anthropic), DeepSeek y OpenRouter.
+- IA: proveedor intercambiable (`IAiProvider`), seleccionable por configuración (`AiProvider:Active`); adapters listos para Claude (Anthropic), DeepSeek, OpenRouter y Gemini — **generación real validada end-to-end con Gemini**.
 - Conocimiento editorial: `knowledge/*.md` con front-matter YAML (herencia entre perfiles).
 - Observabilidad: OpenTelemetry (traces/metrics), correlation-id, health checks `/health` y `/ready`.
 - Docker: `Dockerfile` multi-stage + `docker-compose.yml` listos para levantar localmente.
@@ -52,10 +52,11 @@ Antes de generar contenido real:
 ```bash
 cd src/Api
 dotnet user-secrets init
-dotnet user-secrets set "AiProvider:Active" "Claude"          # o "DeepSeek" u "OpenRouter"
+dotnet user-secrets set "AiProvider:Active" "Claude"          # o "DeepSeek", "OpenRouter", "Gemini"
 dotnet user-secrets set "AiProvider:Claude:ApiKey" "sk-ant-..."
 dotnet user-secrets set "AiProvider:DeepSeek:ApiKey" "sk-..."
 dotnet user-secrets set "AiProvider:OpenRouter:ApiKey" "sk-or-v1-..."
+dotnet user-secrets set "AiProvider:Gemini:ApiKey" "AIza..."
 ```
 
 ## Correrlo con Docker

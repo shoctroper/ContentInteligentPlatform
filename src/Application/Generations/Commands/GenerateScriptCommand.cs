@@ -72,7 +72,8 @@ public class GenerateScriptCommandHandler : IRequestHandler<GenerateScriptComman
         var extractionCompletion = await _aiProvider.CompleteAsync(
             new AiCompletionRequest(extractionSystemPrompt, extractionUserPrompt), cancellationToken);
 
-        var extraction = JsonSerializer.Deserialize<ExtractionResultDto>(extractionCompletion.Text, JsonOptions)
+        var extraction = JsonSerializer.Deserialize<ExtractionResultDto>(
+                LlmJsonResponse.StripMarkdownFence(extractionCompletion.Text), JsonOptions)
             ?? throw new InvalidOperationException("El proveedor de IA devolvió una extracción inválida.");
 
         var newsItemResult = NewsItem.Create(source.Id, extraction.Title, extraction.Summary,
@@ -88,7 +89,8 @@ public class GenerateScriptCommandHandler : IRequestHandler<GenerateScriptComman
         var scriptCompletion = await _aiProvider.CompleteAsync(
             new AiCompletionRequest(scriptSystemPrompt, scriptUserPrompt), cancellationToken);
 
-        var script = JsonSerializer.Deserialize<ScriptResultDto>(scriptCompletion.Text, JsonOptions)
+        var script = JsonSerializer.Deserialize<ScriptResultDto>(
+                LlmJsonResponse.StripMarkdownFence(scriptCompletion.Text), JsonOptions)
             ?? throw new InvalidOperationException("El proveedor de IA devolvió un guion inválido.");
 
         // 8. Salida: persistir Generation

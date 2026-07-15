@@ -49,9 +49,15 @@ builder.Services.AddSingleton(new OpenRouterAiProviderOptions
     SiteUrl = builder.Configuration["AiProvider:OpenRouter:SiteUrl"],
     SiteName = builder.Configuration["AiProvider:OpenRouter:SiteName"] ?? "Content Intelligence Platform"
 });
+builder.Services.AddSingleton(new GeminiAiProviderOptions
+{
+    ApiKey = builder.Configuration["AiProvider:Gemini:ApiKey"] ?? string.Empty,
+    Model = builder.Configuration["AiProvider:Gemini:Model"] ?? "gemini-3.5-flash"
+});
 builder.Services.AddHttpClient("Claude");
 builder.Services.AddHttpClient("DeepSeek");
 builder.Services.AddHttpClient("OpenRouter");
+builder.Services.AddHttpClient("Gemini");
 
 var activeAiProvider = builder.Configuration["AiProvider:Active"] ?? "Claude";
 builder.Services.AddScoped<IAiProvider>(sp =>
@@ -61,9 +67,10 @@ builder.Services.AddScoped<IAiProvider>(sp =>
     {
         "DeepSeek" => new DeepSeekAiProvider(httpClientFactory.CreateClient("DeepSeek"), sp.GetRequiredService<DeepSeekAiProviderOptions>()),
         "OpenRouter" => new OpenRouterAiProvider(httpClientFactory.CreateClient("OpenRouter"), sp.GetRequiredService<OpenRouterAiProviderOptions>()),
+        "Gemini" => new GeminiAiProvider(httpClientFactory.CreateClient("Gemini"), sp.GetRequiredService<GeminiAiProviderOptions>()),
         "Claude" => new ClaudeAiProvider(httpClientFactory.CreateClient("Claude"), sp.GetRequiredService<ClaudeAiProviderOptions>()),
         _ => throw new InvalidOperationException(
-            $"Proveedor de IA desconocido en AiProvider:Active: '{activeAiProvider}'. Valores soportados: Claude, DeepSeek, OpenRouter.")
+            $"Proveedor de IA desconocido en AiProvider:Active: '{activeAiProvider}'. Valores soportados: Claude, DeepSeek, OpenRouter, Gemini.")
     };
 });
 
