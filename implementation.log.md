@@ -107,3 +107,18 @@ Con luz verde explícita del usuario para avanzar sin esperar revisión de UX, s
   generado real.**
 - Suite completa: **54/54 pruebas** (antes 49).
 - La API key se usó solo como variable de entorno temporal en el sandbox; no quedó en ningún archivo del repo.
+
+---
+
+## Quinta iteración: tercer proveedor de IA — OpenRouter (ADR-008)
+
+- Nuevo adapter `OpenRouterAiProvider` (agregador multi-modelo, default `openai/gpt-4o-mini`, usa `usage.cost`
+  nativo del response en vez de tabla de precios local). 5 tests nuevos (21/21 en `Infrastructure.Tests`).
+- `AiProvider:Active` ahora soporta `"Claude" | "DeepSeek" | "OpenRouter"`.
+- **Validación real**: misma mecánica que con DeepSeek — la Api completa corrió contra la API real de OpenRouter
+  con la key provista. Resultado: `402 Insufficient credits` (key válida, cuenta sin créditos). Segunda
+  confirmación consecutiva de que la arquitectura de proveedor intercambiable funciona correctamente end-to-end;
+  el bloqueo para ver contenido real generado es exclusivamente de saldo/créditos en las cuentas de IA, no de
+  código.
+- Suite completa: **59/59 pruebas** (antes 54).
+- La key se usó solo como variable de entorno temporal; no quedó en ningún archivo del repo.

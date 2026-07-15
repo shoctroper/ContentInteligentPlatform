@@ -42,8 +42,16 @@ builder.Services.AddSingleton(new DeepSeekAiProviderOptions
     ApiKey = builder.Configuration["AiProvider:DeepSeek:ApiKey"] ?? string.Empty,
     Model = builder.Configuration["AiProvider:DeepSeek:Model"] ?? "deepseek-v4-flash"
 });
+builder.Services.AddSingleton(new OpenRouterAiProviderOptions
+{
+    ApiKey = builder.Configuration["AiProvider:OpenRouter:ApiKey"] ?? string.Empty,
+    Model = builder.Configuration["AiProvider:OpenRouter:Model"] ?? "openai/gpt-4o-mini",
+    SiteUrl = builder.Configuration["AiProvider:OpenRouter:SiteUrl"],
+    SiteName = builder.Configuration["AiProvider:OpenRouter:SiteName"] ?? "Content Intelligence Platform"
+});
 builder.Services.AddHttpClient("Claude");
 builder.Services.AddHttpClient("DeepSeek");
+builder.Services.AddHttpClient("OpenRouter");
 
 var activeAiProvider = builder.Configuration["AiProvider:Active"] ?? "Claude";
 builder.Services.AddScoped<IAiProvider>(sp =>
@@ -52,9 +60,10 @@ builder.Services.AddScoped<IAiProvider>(sp =>
     return activeAiProvider switch
     {
         "DeepSeek" => new DeepSeekAiProvider(httpClientFactory.CreateClient("DeepSeek"), sp.GetRequiredService<DeepSeekAiProviderOptions>()),
+        "OpenRouter" => new OpenRouterAiProvider(httpClientFactory.CreateClient("OpenRouter"), sp.GetRequiredService<OpenRouterAiProviderOptions>()),
         "Claude" => new ClaudeAiProvider(httpClientFactory.CreateClient("Claude"), sp.GetRequiredService<ClaudeAiProviderOptions>()),
         _ => throw new InvalidOperationException(
-            $"Proveedor de IA desconocido en AiProvider:Active: '{activeAiProvider}'. Valores soportados: Claude, DeepSeek.")
+            $"Proveedor de IA desconocido en AiProvider:Active: '{activeAiProvider}'. Valores soportados: Claude, DeepSeek, OpenRouter.")
     };
 });
 
